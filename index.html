@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToolDash-OS – Die KI-Plattform mit Kontrolle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0e0f12;
+      --bg-soft:       #14161a;
+      --surface:       #16181d;
+      --surface-2:     #1b1e24;
+      --border:        #232730;
+      --border-strong: #2f3540;
+      --fg:            #ecedf0;
+      --fg-soft:       #b3b6bd;
+      --muted:         #71757f;
+      --primary:       #2cc587;
+      --primary-soft:  #3ed599;
+      --primary-bg:    #102a20;
+      --accent:        #5a85ff;
+      --accent-bg:     #15203a;
+      --danger:        #f87171;
+      --warn:          #fbbf24;
+      --body: 'DM Sans', system-ui, sans-serif;
+      --mono: 'IBM Plex Mono', ui-monospace, monospace;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    html { scroll-behavior: smooth; scroll-snap-type: y proximity; }
+    body {
+      font-family: var(--body);
+      background: var(--bg);
+      color: var(--fg);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── Atmospheric Background ── */
+    .bg-atmo { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .bg-grid {
+      position: absolute; inset: -2px;
+      background-image:
+        linear-gradient(to right, var(--border) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 20%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 20%, transparent 80%);
+      opacity: .3;
+    }
+    .bg-glow {
+      position: absolute; width: 900px; height: 900px; border-radius: 50%;
+      background: radial-gradient(circle at center, rgba(44,197,135,.18) 0%, transparent 62%);
+      filter: blur(60px); top: -400px; left: -300px;
+      animation: driftA 42s ease-in-out infinite alternate;
+    }
+    .bg-glow.b {
+      background: radial-gradient(circle at center, rgba(90,133,255,.14) 0%, transparent 62%);
+      top: 40%; right: -350px; left: auto;
+      animation: driftB 56s ease-in-out infinite alternate; animation-delay: -14s;
+    }
+    @keyframes driftA { 0%{transform:translate(0,0)} 100%{transform:translate(120px,90px)} }
+    @keyframes driftB { 0%{transform:translate(0,0)} 100%{transform:translate(-90px,110px)} }
+    .bg-dots { position: absolute; inset: 0; }
+    .bg-dot {
+      position: absolute; width: 3px; height: 3px; border-radius: 50%;
+      background: var(--primary); opacity: 0;
+      animation: dotPulse 6s ease-in-out infinite;
+    }
+    @keyframes dotPulse { 0%,100%{opacity:0;transform:scale(.6)} 50%{opacity:.45;transform:scale(1)} }
+    @media (prefers-reduced-motion: reduce) { .bg-glow,.bg-dot{animation:none} }
+
+    /* ── Slide System ── */
+    .slide {
+      position: relative; z-index: 1;
+      min-height: 100svh;
+      scroll-snap-align: start;
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      padding: 64px 40px;
+    }
+    .slide-inner { width: 100%; max-width: 980px; display: flex; flex-direction: column; gap: 32px; }
+
+    /* ── Typography ── */
+    .section-label {
+      font-family: var(--mono); font-size: 10px; letter-spacing: .2em;
+      text-transform: uppercase; color: var(--primary);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-label::before { content: ''; display: block; width: 24px; height: 1px; background: var(--primary); }
+    .section-title { font-size: clamp(28px, 4vw, 46px); font-weight: 800; letter-spacing: -.03em; line-height: 1.08; }
+    .section-sub { font-size: 16px; color: var(--fg-soft); line-height: 1.7; max-width: 640px; }
+    .grad {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      padding: 14px 28px; border-radius: var(--radius); font-weight: 700;
+      font-size: 15px; background: var(--primary); color: #06120c;
+      border: none; cursor: pointer; font-family: var(--body); transition: all .2s;
+      text-decoration: none; display: inline-block;
+    }
+    .btn-primary:hover { background: var(--primary-soft); transform: translateY(-1px); }
+
+    /* ── Cards ── */
+    .card-grid { display: grid; gap: 16px; }
+    .card-grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .card-grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .card-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+    /* ── Hero ── */
+    .hero-logo { width: 100px; height: 100px; animation: logoFloat 8s ease-in-out infinite; }
+    @keyframes logoFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .hero-tag {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .18em;
+      text-transform: uppercase; color: var(--primary);
+      border: 1px solid rgba(44,197,135,.25); background: var(--primary-bg);
+      padding: 5px 14px; border-radius: 99px; display: inline-block;
+    }
+    .hero-title { font-size: clamp(34px, 5.5vw, 62px); font-weight: 800; line-height: 1.07; letter-spacing: -.035em; }
+    .hero-sub { font-size: clamp(15px, 1.8vw, 19px); color: var(--fg-soft); max-width: 700px; line-height: 1.7; }
+    .hero-stats {
+      display: flex; gap: 0; justify-content: center;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--surface); overflow: hidden; width: 100%;
+    }
+    .hero-stat {
+      flex: 1; text-align: center; padding: 20px 16px;
+      border-right: 1px solid var(--border);
+    }
+    .hero-stat:last-child { border-right: none; }
+    .hero-stat-num {
+      font-size: 26px; font-weight: 800; letter-spacing: -.03em;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero-stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; font-family: var(--mono); letter-spacing: .05em; }
+
+    /* ── Problem/Solution ── */
+    .problem-solution { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .ps-block { border-radius: var(--radius); padding: 28px; }
+    .ps-block.problem { background: rgba(248,113,113,.05); border: 1px solid rgba(248,113,113,.18); }
+    .ps-block.solution { background: rgba(44,197,135,.05); border: 1px solid rgba(44,197,135,.2); }
+    .ps-label { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 16px; font-weight: 500; }
+    .ps-block.problem .ps-label { color: var(--danger); }
+    .ps-block.solution .ps-label { color: var(--primary); }
+    .ps-list { list-style: none; display: flex; flex-direction: column; gap: 11px; }
+    .ps-list li { display: flex; gap: 10px; font-size: 14px; color: var(--fg-soft); line-height: 1.55; }
+    .ps-list li::before { flex-shrink: 0; margin-top: 1px; font-size: 13px; font-weight: 700; }
+    .ps-block.problem .ps-list li::before { content: '✗'; color: var(--danger); }
+    .ps-block.solution .ps-list li::before { content: '✓'; color: var(--primary); }
+
+    /* ── Warum jetzt ── */
+    .why-now { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .why-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .why-card .why-head { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+    .why-card .why-body { font-size: 12px; color: var(--fg-soft); line-height: 1.6; }
+
+    /* ── 4 Säulen ── */
+    .pillars { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .pillar {
+      border-radius: var(--radius); padding: 32px 28px;
+      display: flex; flex-direction: column; gap: 14px;
+      transition: all .25s; border: 1px solid var(--border);
+      background: var(--surface);
+      position: relative; overflow: hidden;
+    }
+    .pillar::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 10% 10%, rgba(44,197,135,.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .pillar:nth-child(2)::before { background: radial-gradient(ellipse 80% 60% at 10% 10%, rgba(90,133,255,.06) 0%, transparent 70%); }
+    .pillar:nth-child(3)::before { background: radial-gradient(ellipse 80% 60% at 10% 10%, rgba(251,191,36,.05) 0%, transparent 70%); }
+    .pillar:nth-child(4)::before { background: radial-gradient(ellipse 80% 60% at 10% 10%, rgba(44,197,135,.05) 0%, transparent 70%); }
+    .pillar:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,.45); border-color: var(--border-strong); }
+    .pillar-icon { font-size: 36px; }
+    .pillar-title { font-size: 20px; font-weight: 800; letter-spacing: -.025em; }
+    .pillar-sub { font-size: 12px; font-family: var(--mono); color: var(--primary); letter-spacing: .08em; text-transform: uppercase; margin-top: -8px; }
+    .pillar-desc { font-size: 14px; color: var(--fg-soft); line-height: 1.7; }
+    .pillar-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .ptag {
+      font-size: 11px; font-family: var(--mono); padding: 3px 9px;
+      border-radius: 99px; border: 1px solid var(--border);
+      background: var(--bg-soft); color: var(--muted);
+    }
+
+    /* ── Vergleich ── */
+    .compare-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .compare-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column; gap: 14px;
+    }
+    .compare-item .label {
+      font-size: 11px; font-family: var(--mono); letter-spacing: .1em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .compare-item .head { font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
+    .compare-item ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .compare-item li { display: flex; gap: 8px; font-size: 13px; color: var(--fg-soft); line-height: 1.5; }
+    .compare-item li .mark { flex-shrink: 0; font-weight: 700; }
+    .compare-item li .mark.check { color: var(--primary); }
+    .compare-item li .mark.cross { color: var(--danger); }
+    .compare-item.highlight { border-color: rgba(44,197,135,.35); background: rgba(44,197,135,.04); }
+    .compare-item.highlight .label { color: var(--primary); }
+
+    .usp-detail {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 22px;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .usp-detail .usp-head { font-size: 14px; font-weight: 700; color: var(--fg); }
+    .usp-detail .usp-head .vs { font-size: 10px; font-weight: 400; color: var(--danger); font-family: var(--mono); margin-left: 8px; }
+    .usp-detail .usp-neg { font-size: 13px; color: var(--fg-soft); }
+    .usp-detail .usp-pos { font-size: 13px; color: var(--primary); }
+
+    /* ── Perspektiven-Slider ── */
+    .persp-slider { position: relative; }
+    .persp-track { position: relative; min-height: 460px; }
+    .persp-slide {
+      position: absolute; inset: 0;
+      display: grid; grid-template-columns: 1fr 1.15fr; gap: 24px;
+      opacity: 0; transform: translateX(28px); pointer-events: none;
+      transition: opacity .45s ease, transform .45s ease;
+    }
+    .persp-slide.active { opacity: 1; transform: translateX(0); pointer-events: auto; position: relative; }
+    .persp-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px;
+      display: flex; flex-direction: column; gap: 12px; justify-content: center;
+    }
+    .persp-icon { font-size: 32px; }
+    .persp-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); }
+    .persp-title { font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+    .persp-desc { font-size: 14px; color: var(--fg-soft); line-height: 1.7; }
+    .persp-visual {
+      background: var(--surface-2); border: 1px solid var(--border-strong);
+      border-radius: var(--radius); padding: 22px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 16px 48px rgba(0,0,0,.5); overflow: hidden;
+      min-height: 460px;
+    }
+    .persp-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 20px; }
+    .persp-arrow {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--fg-soft); font-size: 15px; cursor: pointer; transition: all .2s;
+      display: flex; align-items: center; justify-content: center; font-family: var(--body);
+    }
+    .persp-arrow:hover { border-color: var(--primary); color: var(--primary); }
+    .persp-dots { display: flex; gap: 8px; }
+    .persp-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--border-strong); border: none; cursor: pointer; transition: all .25s; padding: 0;
+    }
+    .persp-dot.active { background: var(--primary); width: 22px; border-radius: 99px; }
+
+    /* ── UI-Mockups (Slider-Grafiken) ── */
+    .mock {
+      width: 100%; max-width: 520px;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; font-size: 12px;
+    }
+    /* Topbar im Stil der ToolDash-SPA: Breadcrumb + Suche + Avatar */
+    .mock-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; border-bottom: 1px solid var(--border); background: var(--bg-soft);
+    }
+    .mock-bar .m-crumb { font-family: var(--mono); font-size: 9.5px; color: var(--fg-soft); letter-spacing: .06em; white-space: nowrap; }
+    .mock-bar .m-crumb .sep { color: var(--muted); margin: 0 4px; }
+    .mock-bar .m-crumb .here { color: var(--fg); }
+    .mock-bar .m-search {
+      flex: 1; display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 99px;
+      padding: 3px 10px; font-size: 9px; color: var(--muted); font-family: var(--body);
+      min-width: 0;
+    }
+    .mock-bar .m-search .kbd {
+      font-family: var(--mono); font-size: 8px; border: 1px solid var(--border);
+      border-radius: 4px; padding: 0 4px; background: var(--bg-soft);
+    }
+    .mock-bar .m-user {
+      width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+      background: var(--primary-bg); color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 8px; font-weight: 700; border: 1px solid rgba(44,197,135,.3);
+    }
+    /* Seitenkopf + Tab-Pills wie in der SPA */
+    .m-page { display: flex; flex-direction: column; gap: 2px; }
+    .m-page .m-h1 { font-size: 15px; font-weight: 800; color: var(--fg); letter-spacing: -.02em; }
+    .m-page .m-h1sub { font-size: 9px; color: var(--muted); }
+    .m-tabs { display: flex; gap: 6px; }
+    .m-tab {
+      font-size: 9px; padding: 3px 10px; border-radius: 99px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--fg-soft);
+    }
+    .m-tab.on { border-color: rgba(44,197,135,.4); background: var(--primary-bg); color: var(--primary); font-weight: 600; }
+    .mock-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .m-row { display: flex; align-items: center; gap: 10px; }
+    .m-label { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+    .m-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .m-kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+    .m-kpi .num { font-size: 15px; font-weight: 800; color: var(--fg); }
+    .m-kpi .num.green { color: var(--primary); }
+    .m-kpi .lbl { font-size: 8px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+    .m-track { flex: 1; height: 8px; border-radius: 99px; background: var(--surface); border: 1px solid var(--border); overflow: hidden; }
+    .m-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      transform: scaleX(0); transform-origin: left;
+    }
+    .persp-slide.active .m-fill { animation: fillGrow 1.2s cubic-bezier(.25,.8,.3,1) both; animation-delay: .3s; }
+    @keyframes fillGrow { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+    .m-fill.warn { background: var(--warn); }
+    .m-kpi, .m-idea, .m-course, .m-sess { opacity: 0; }
+    .persp-slide.active .m-kpi, .persp-slide.active .m-idea,
+    .persp-slide.active .m-course, .persp-slide.active .m-sess { animation: itemPop .5s ease both; }
+    .persp-slide.active .m-kpi:nth-child(2), .persp-slide.active .m-idea:nth-of-type(2), .persp-slide.active .m-course:nth-of-type(2) { animation-delay: .15s; }
+    .persp-slide.active .m-kpi:nth-child(3), .persp-slide.active .m-idea:nth-of-type(3), .persp-slide.active .m-course:nth-of-type(3) { animation-delay: .3s; }
+    .persp-slide.active .m-idea:nth-of-type(4) { animation-delay: .45s; }
+    @keyframes itemPop { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: translateY(0) } }
+    .m-name { font-size: 10px; color: var(--fg-soft); width: 74px; flex-shrink: 0; }
+    .m-val { font-family: var(--mono); font-size: 9px; color: var(--muted); width: 58px; text-align: right; flex-shrink: 0; }
+    .m-avatar {
+      width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+      background: var(--primary-bg); color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 8px; font-weight: 700;
+    }
+    .m-avatar.blue { background: var(--accent-bg); color: var(--accent); }
+    .m-avatar.warn { background: rgba(251,191,36,.12); color: var(--warn); }
+    .m-pill {
+      font-family: var(--mono); font-size: 8px; padding: 2px 7px; border-radius: 99px;
+      background: var(--primary-bg); color: var(--primary); border: 1px solid rgba(44,197,135,.25); flex-shrink: 0;
+    }
+    .m-pill.blue { background: var(--accent-bg); color: var(--accent); border-color: rgba(90,133,255,.3); }
+    .m-pill.dim { background: var(--surface); color: var(--muted); border-color: var(--border); }
+    .m-idea {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 9px 11px; display: flex; align-items: center; gap: 8px;
+    }
+    .m-idea .t { font-size: 10px; color: var(--fg); font-weight: 600; flex: 1; }
+    .m-course { display: flex; flex-direction: column; gap: 5px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; }
+    .m-course .t { font-size: 10px; font-weight: 600; color: var(--fg); display: flex; justify-content: space-between; }
+    .m-course .t .pct { font-family: var(--mono); font-size: 9px; color: var(--primary); }
+    .mock-duo { display: flex; align-items: center; gap: 18px; justify-content: center; width: 100%; }
+    .mock-phone {
+      width: 148px; background: var(--bg);
+      border: 3px solid var(--border-strong);
+      border-radius: 22px; overflow: hidden; flex-shrink: 0;
+      box-shadow: 0 12px 32px rgba(0,0,0,.5);
+    }
+    .mock-phone .p-status {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 12px 4px; font-family: var(--mono); font-size: 8px; color: var(--muted);
+    }
+    .mock-phone .p-status .cam { width: 40px; height: 9px; border-radius: 99px; background: var(--border-strong); }
+    .mock-phone .p-head {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px; border-bottom: 1px solid var(--border);
+    }
+    .mock-phone .p-head .p-logo { width: 14px; height: 14px; border-radius: 4px; background: linear-gradient(135deg, var(--primary), var(--accent)); }
+    .mock-phone .p-head .p-title { font-size: 9px; font-weight: 700; color: var(--fg); }
+    .mock-phone .p-body { padding: 10px; display: flex; flex-direction: column; gap: 7px; }
+    .mock-phone .p-nav {
+      display: flex; justify-content: space-around; padding: 6px 0 8px;
+      border-top: 1px solid var(--border); font-size: 10px;
+    }
+    .mock-phone .p-nav span { opacity: .4; }
+    .mock-phone .p-nav span.on { opacity: 1; }
+    .mock-phone .p-home { height: 12px; display: flex; justify-content: center; align-items: center; }
+    .mock-phone .p-home::after { content: ''; width: 44px; height: 4px; border-radius: 99px; background: var(--border-strong); }
+    .m-sess {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+      padding: 7px 9px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .m-sess .s-head { display: flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 700; color: var(--fg); }
+    .m-sess .s-sub { font-family: var(--mono); font-size: 8px; color: var(--muted); }
+    .s-live { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); animation: livePulse 1.6s ease-in-out infinite; flex-shrink: 0; }
+    @keyframes livePulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .m-code { font-family: var(--mono); font-size: 8.5px; line-height: 1.7; color: var(--fg-soft); }
+    .m-code .c-green { color: var(--primary); }
+    .m-code .c-blue { color: var(--accent); }
+    .m-code .c-dim { color: var(--muted); }
+    .m-caret { display: inline-block; width: 5px; height: 9px; background: var(--primary); vertical-align: -1px; animation: livePulse 1s step-end infinite; }
+
+    /* ── Ausblick Tools ── */
+    .tool-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 16px;
+      display: flex; flex-direction: column; gap: 6px; transition: all .25s;
+    }
+    .tool-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(44,197,135,.08); }
+    .tool-card-head { display: flex; align-items: center; gap: 10px; }
+    .tool-card-icon { font-size: 20px; flex-shrink: 0; }
+    .tool-card-title { font-size: 14px; font-weight: 700; letter-spacing: -.015em; }
+    .tool-card-desc { font-size: 12px; color: var(--fg-soft); line-height: 1.5; }
+
+    /* ── Skalierung ── */
+    .tier-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px; display: flex; flex-direction: column; gap: 16px;
+    }
+    .tier-label { font-family: var(--mono); font-size: 10px; letter-spacing: .15em; text-transform: uppercase; }
+    .tier-size { font-size: 28px; font-weight: 800; letter-spacing: -.03em; margin-top: -4px; }
+    .tier-list { display: flex; flex-direction: column; gap: 8px; }
+    .tier-list li { display: flex; gap: 8px; font-size: 13px; color: var(--fg-soft); line-height: 1.5; list-style: none; }
+
+    /* ── Roadmap ── */
+    .roadmap { display: flex; flex-direction: column; }
+    .roadmap-item { display: flex; gap: 28px; padding: 22px 0; border-bottom: 1px solid var(--border); }
+    .roadmap-item:last-child { border-bottom: none; }
+    .roadmap-left { width: 130px; flex-shrink: 0; }
+    .roadmap-phase { font-family: var(--mono); font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); }
+    .roadmap-date { font-size: 13px; font-weight: 600; color: var(--fg-soft); margin-top: 2px; }
+    .roadmap-status {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-family: var(--mono); padding: 3px 8px;
+      border-radius: 99px; margin-top: 8px;
+    }
+    .status-done   { background: rgba(44,197,135,.12); color: var(--primary); border: 1px solid rgba(44,197,135,.25); }
+    .status-active { background: rgba(251,191,36,.1);  color: var(--warn);    border: 1px solid rgba(251,191,36,.25); }
+    .status-planned{ background: var(--surface-2);     color: var(--muted);   border: 1px solid var(--border); }
+    .roadmap-right { flex: 1; }
+    .roadmap-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; letter-spacing: -.015em; }
+    .roadmap-desc { font-size: 13px; color: var(--fg-soft); line-height: 1.6; max-width: 640px; }
+    .roadmap-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .pill { font-size: 11px; font-family: var(--mono); padding: 4px 10px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface); color: var(--fg-soft); }
+    .pill.done { background: var(--primary-bg); border-color: rgba(44,197,135,.3); color: var(--primary); }
+    .pill.active { background: var(--accent-bg); border-color: rgba(90,133,255,.35); color: var(--accent); }
+
+    /* ── Misc ── */
+    .quote-block {
+      border-left: 3px solid var(--primary); padding: 4px 0 4px 20px;
+      font-size: 15px; line-height: 1.8; color: var(--fg-soft); font-style: italic;
+    }
+    .divider { height: 1px; background: var(--border); width: 100%; }
+    .tech-row {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      padding: 20px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .tech-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--bg-soft); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 6px 12px; font-size: 12px; color: var(--fg-soft);
+    }
+    .contact-email {
+      font-family: var(--mono); color: var(--fg-soft); font-size: 14px;
+      letter-spacing: .05em; background: var(--surface-2);
+      padding: 10px 18px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+      cursor: pointer; transition: all .2s; user-select: none;
+    }
+    .contact-email:hover { border-color: var(--primary); color: var(--fg); }
+    .contact-email.copied { border-color: rgba(44,197,135,.5); color: var(--primary); background: var(--primary-bg); }
+
+    /* ── Scroll-Reveal ── */
+    .reveal { opacity: 0; transform: translateY(22px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+      .persp-slide { transition: none; }
+      .m-fill { animation: none !important; transform: scaleX(1); }
+      .m-kpi, .m-idea, .m-course, .m-sess { opacity: 1; animation: none !important; }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 740px) {
+      .card-grid-2,.card-grid-3,.card-grid-4,
+      .problem-solution,.pillars,.compare-grid,.why-now { grid-template-columns: 1fr; }
+      .hero-stats { flex-direction: column; }
+      .hero-stat { border-right: none; border-bottom: 1px solid var(--border); }
+      .hero-stat:last-child { border-bottom: none; }
+      .roadmap-item { flex-direction: column; gap: 8px; }
+      .roadmap-left { width: auto; }
+      .slide { padding: 48px 20px; }
+      .persp-slide { grid-template-columns: 1fr; }
+      .persp-track { min-height: 620px; }
+      .mock-duo { flex-direction: column; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-atmo">
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+  <div class="bg-glow b"></div>
+  <div class="bg-dots" id="dots"></div>
+</div>
+
+<!-- ═══ 1. HERO – Elevator Pitch ═══ -->
+<section class="slide" id="hero">
+  <div class="slide-inner" style="align-items:center;text-align:center;gap:36px">
+    <img src="resources/gradient-animated-dark.svg" alt="ToolDash" class="hero-logo">
+    <div class="hero-tag">Hybride KI-Plattform · Cloud-Steuerung · volle Datenhoheit</div>
+    <h1 class="hero-title">
+      KI arbeitet längst in eurem Team.<br>
+      Jetzt arbeitet sie für euch.<br>
+      <span class="grad">Zentral gesteuert.<br>Endlich unter Kontrolle.</span>
+    </h1>
+    <p class="hero-sub">
+      Schluss mit privaten KI-Accounts und wildem Abo-Chaos: ToolDash-OS bündelt
+      alle KI-Zugänge eures Teams in einer Plattform. Spezialisierte Agents erledigen
+      Aufgaben autonom, Budgets bleiben im Rahmen und euer Wissen bleibt im Haus.
+      Cloud-Dashboard für die Steuerung, Ausführung wahlweise auch auf eurer eigenen Hardware.
+    </p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-num">bis 60 %</div>
+        <div class="hero-stat-label">Token-Ersparnis durch Memory & Caching</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">Agentic</div>
+        <div class="hero-stat-label">Delegieren statt prompten, rund um die Uhr</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">BYOK</div>
+        <div class="hero-stat-label">Bring-your-own-Key<br>eure Abos & Keys, gepoolt</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-num">Hybrid</div>
+        <div class="hero-stat-label">Cloud + eigene Hardware, DSGVO-konform</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 2. PERSPEKTIVEN-SLIDER (In der Praxis) ═══ -->
+<section class="slide" id="perspektiven">
+  <div class="slide-inner">
+    <div class="section-label">In der Praxis</div>
+    <h2 class="section-title reveal">Ein System.<br>Für jede Rolle der richtige Blick.</h2>
+    <p class="section-sub reveal">
+      Von der Geschäftsführung bis zum Entwickler: jede Rolle bekommt die Sicht
+      und die Werkzeuge, die sie wirklich braucht.
+    </p>
+
+    <div class="persp-slider reveal" id="perspSlider">
+      <div class="persp-track">
+
+        <!-- Slide 1: Kostenkontrolle -->
+        <div class="persp-slide active">
+          <div class="persp-card">
+            <div class="persp-icon">🏢</div>
+            <div class="persp-tag">Geschäftsführung & Entscheider</div>
+            <div class="persp-title">Kontrolle, Compliance, Planbarkeit</div>
+            <div class="persp-desc">
+              Volle Transparenz über KI-Kosten und -Nutzung, harte Budget-Limits,
+              DSGVO-konformer Betrieb auf eigener Infrastruktur. KI wird vom
+              unkalkulierbaren Risiko zum steuerbaren Betriebsmittel.
+            </div>
+          </div>
+          <div class="persp-visual">
+            <div class="mock">
+              <div class="mock-bar">
+                <span class="m-crumb">tooldash<span class="sep">/</span><span class="here">verbrauch</span></span>
+                <span class="m-search"><span>Suche…</span><span class="kbd">⌘K</span></span>
+                <span class="m-user">AD</span>
+              </div>
+              <div class="mock-body">
+                <div class="m-page"><span class="m-h1">Token-Verbrauch</span><span class="m-h1sub">Juli · alle Teams</span></div>
+                <div class="m-kpis">
+                  <div class="m-kpi"><div class="num">1,2 M</div><div class="lbl">Tokens genutzt</div></div>
+                  <div class="m-kpi"><div class="num green">−54 %</div><div class="lbl">durch Memory & Caching</div></div>
+                  <div class="m-kpi"><div class="num">348 €</div><div class="lbl">von 900 € Budget</div></div>
+                </div>
+                <div class="m-label">Budget-Auslastung nach Team</div>
+                <div class="m-row"><span class="m-name">Kreation</span><div class="m-track"><div class="m-fill" style="width:64%"></div></div><span class="m-val">64 %</span></div>
+                <div class="m-row"><span class="m-name">Development</span><div class="m-track"><div class="m-fill" style="width:41%"></div></div><span class="m-val">41 %</span></div>
+                <div class="m-row"><span class="m-name">Marketing</span><div class="m-track"><div class="m-fill warn" style="width:88%"></div></div><span class="m-val">88 %</span></div>
+                <div class="m-row"><span class="m-name">Projektbüro</span><div class="m-track"><div class="m-fill" style="width:23%"></div></div><span class="m-val">23 %</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide 2: Team-Dashboard -->
+        <div class="persp-slide">
+          <div class="persp-card">
+            <div class="persp-icon">📊</div>
+            <div class="persp-tag">Team-Leads & Projektverantwortliche</div>
+            <div class="persp-title">KI-Nutzung dezentral steuern</div>
+            <div class="persp-desc">
+              Budgets auf Teammitglieder verteilen, Aktivitäten und Agenten im Blick behalten,
+              neue Mitglieder per Link einladen. Jedes Team verwaltet sich selbst,
+              innerhalb der Grenzen, die das Unternehmen setzt.
+            </div>
+          </div>
+          <div class="persp-visual">
+            <div class="mock">
+              <div class="mock-bar">
+                <span class="m-crumb">tooldash<span class="sep">/</span><span class="here">team</span></span>
+                <span class="m-search"><span>Suche…</span><span class="kbd">⌘K</span></span>
+                <span class="m-user">LM</span>
+              </div>
+              <div class="mock-body">
+                <div class="m-page"><span class="m-h1">Team Kreation</span><span class="m-h1sub">6 Mitglieder · eigenes Budget</span></div>
+                <div class="m-label">Mitglieder & Budgets</div>
+                <div class="m-row"><span class="m-avatar">LM</span><span class="m-name">Lena M.</span><div class="m-track"><div class="m-fill" style="width:52%"></div></div><span class="m-pill">aktiv</span></div>
+                <div class="m-row"><span class="m-avatar blue">JK</span><span class="m-name">Jonas K.</span><div class="m-track"><div class="m-fill" style="width:74%"></div></div><span class="m-pill">aktiv</span></div>
+                <div class="m-row"><span class="m-avatar warn">SB</span><span class="m-name">Sarah B.</span><div class="m-track"><div class="m-fill" style="width:31%"></div></div><span class="m-pill blue">Agent läuft</span></div>
+                <div class="m-row"><span class="m-avatar">TW</span><span class="m-name">Tim W.</span><div class="m-track"><div class="m-fill" style="width:12%"></div></div><span class="m-pill dim">neu · per Link</span></div>
+                <div class="m-label" style="margin-top:4px">Laufende Agenten</div>
+                <div class="m-idea"><span class="s-live"></span><span class="t">Wettbewerbsanalyse Q3</span><span class="m-pill blue">12 min</span></div>
+                <div class="m-idea"><span class="s-live"></span><span class="t">Report-Entwurf Kunde Nord</span><span class="m-pill blue">3 min</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide 3: Brainstorm -->
+        <div class="persp-slide">
+          <div class="persp-card">
+            <div class="persp-icon">💡</div>
+            <div class="persp-tag">Agile & kreative Teams</div>
+            <div class="persp-title">Von der Idee zur Umsetzung</div>
+            <div class="persp-desc">
+              Ideen landen nicht mehr in Notizzetteln oder Chats, sondern im gemeinsamen
+              Brainstorm-Board. Die KI reichert sie an, bewertet sie und macht aus den
+              besten direkt Werkzeuge oder Aufgaben. Der Weg von "Wäre es nicht cool, wenn..."
+              zu "Läuft bereits" wird radikal kurz.
+            </div>
+          </div>
+          <div class="persp-visual">
+            <div class="mock">
+              <div class="mock-bar">
+                <span class="m-crumb">tooldash<span class="sep">/</span><span class="here">brainstorming</span></span>
+                <span class="m-search"><span>Suche…</span><span class="kbd">⌘K</span></span>
+                <span class="m-user">JK</span>
+              </div>
+              <div class="mock-body">
+                <div class="m-page"><span class="m-h1">Brainstorm</span><span class="m-h1sub">Sprint 14 · 4 offene Ideen</span></div>
+                <div class="m-tabs"><span class="m-tab on">Alle Ideen</span><span class="m-tab">Business</span><span class="m-tab">Tools</span></div>
+                <div class="m-idea"><span class="t">Kunden-Reports automatisch versenden</span><span class="m-pill">✦ 8 Sparks</span></div>
+                <div class="m-idea"><span class="t">Onboarding-Checkliste als Tool</span><span class="m-pill">✦ 5 Sparks</span></div>
+                <div class="m-idea" style="border-color:rgba(44,197,135,.35);background:rgba(44,197,135,.04)"><span class="t">Meeting-Notizen zusammenfassen</span><span class="m-pill">→ wird Tool</span></div>
+                <div class="m-idea"><span class="t">Social-Media-Plan aus Briefing</span><span class="m-pill dim">neu</span></div>
+                <div class="m-label" style="margin-top:4px">KI-Anreicherung</div>
+                <div class="m-code">
+                  <span class="c-green">✦</span> Idee analysiert · Aufwand: <span class="c-blue">gering</span><br>
+                  <span class="c-green">✦</span> Vorschlag: als Team-Tool umsetzen <span class="m-caret"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide 4: Library / Onboarding -->
+        <div class="persp-slide">
+          <div class="persp-card">
+            <div class="persp-icon">📚</div>
+            <div class="persp-tag">Onboarding & Weiterbildung</div>
+            <div class="persp-title">Wissen aufbauen, statt es zu verlieren</div>
+            <div class="persp-desc">
+              Die Library bündelt Onboarding, Kurse und Dokumentation mit eigenen Inhalten:
+              für die Einführung von ToolDash selbst, für neue Mitarbeiter und für die
+              Schulung des bestehenden Teams. Und weil die KI dieselbe Wissensbasis nutzt,
+              beantwortet sie Fragen direkt aus euren eigenen Unterlagen.
+            </div>
+          </div>
+          <div class="persp-visual">
+            <div class="mock">
+              <div class="mock-bar">
+                <span class="m-crumb">tooldash<span class="sep">/</span><span class="here">library</span></span>
+                <span class="m-search"><span>Suche…</span><span class="kbd">⌘K</span></span>
+                <span class="m-user">TW</span>
+              </div>
+              <div class="mock-body">
+                <div class="m-page"><span class="m-h1">Library</span><span class="m-h1sub">Mein Lernpfad</span></div>
+                <div class="m-tabs"><span class="m-tab on">Onboarding</span><span class="m-tab">Kurse</span><span class="m-tab">Docs</span></div>
+                <div class="m-course"><div class="t"><span>👋 Willkommen im Team</span><span class="pct">100 %</span></div><div class="m-track"><div class="m-fill" style="width:100%"></div></div></div>
+                <div class="m-course"><div class="t"><span>🎛️ ToolDash Grundlagen</span><span class="pct">80 %</span></div><div class="m-track"><div class="m-fill" style="width:80%"></div></div></div>
+                <div class="m-course"><div class="t"><span>📋 Unsere Projektprozesse</span><span class="pct">35 %</span></div><div class="m-track"><div class="m-fill" style="width:35%"></div></div></div>
+                <div class="m-label" style="margin-top:4px">Schulungen fürs Team</div>
+                <div class="m-idea"><span class="t">Prompt-Basics für Fachabteilungen</span><span class="m-pill">Kurs · 6 Kapitel</span></div>
+                <div class="m-idea"><span class="t">Datenschutz im KI-Alltag</span><span class="m-pill blue">Pflichtmodul</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide 5: Dev-Umgebung Desktop + Mobil -->
+        <div class="persp-slide">
+          <div class="persp-card">
+            <div class="persp-icon">👩‍💻</div>
+            <div class="persp-tag">Entwickler & Tech-Teams</div>
+            <div class="persp-title">Sofort produktive KI-Umgebung</div>
+            <div class="persp-desc">
+              Vollständige Entwicklungs- und Agenten-Umgebung im Browser, auf jedem Gerät,
+              ohne lokales Setup. Am Desktop coden, unterwegs am Handy die laufenden
+              KI-Sessions verfolgen und steuern. Eigene Werkzeuge direkt in der Plattform
+              bauen und mit dem Team teilen.
+            </div>
+          </div>
+          <div class="persp-visual">
+            <div class="mock-duo">
+              <div class="mock" style="max-width:330px">
+                <div class="mock-bar">
+                  <span class="m-crumb">tooldash<span class="sep">/</span><span class="here">workspace</span></span>
+                  <span class="m-user">SB</span>
+                </div>
+                <div class="mock-body">
+                  <div class="m-code">
+                    <span class="c-dim">// Agent implementiert Feature</span><br>
+                    <span class="c-blue">export function</span> <span class="c-green">syncReport</span>(data) {<br>
+                    &nbsp;&nbsp;<span class="c-blue">const</span> result = enrich(data)<br>
+                    &nbsp;&nbsp;<span class="c-blue">return</span> publish(result) <span class="m-caret"></span><br>
+                    }
+                  </div>
+                  <div class="m-idea" style="margin-top:2px"><span class="s-live"></span><span class="t">Agent: Tests schreiben</span><span class="m-pill">läuft</span></div>
+                  <div class="m-idea"><span class="s-live"></span><span class="t">Agent: Doku aktualisieren</span><span class="m-pill blue">wartet</span></div>
+                </div>
+              </div>
+              <div class="mock-phone">
+                <div class="p-status"><span>9:41</span><span class="cam"></span><span>📶</span></div>
+                <div class="p-head"><span class="p-logo"></span><span class="p-title">ToolDash</span></div>
+                <div class="p-body">
+                  <div class="m-label" style="font-size:8px">Meine Sessions</div>
+                  <div class="m-sess"><div class="s-head"><span class="s-live"></span>Feature-Build</div><div class="s-sub">läuft · 14 min</div></div>
+                  <div class="m-sess"><div class="s-head"><span class="s-live"></span>Code-Review</div><div class="s-sub">läuft · 2 min</div></div>
+                  <div class="m-sess"><div class="s-head">✓ Doku-Update</div><div class="s-sub">fertig · 09:41</div></div>
+                </div>
+                <div class="p-nav"><span class="on">🏠</span><span>🤖</span><span>💡</span><span>👤</span></div>
+                <div class="p-home"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="persp-nav">
+        <button class="persp-arrow" id="perspPrev" aria-label="Zurück">←</button>
+        <div class="persp-dots" id="perspDots"></div>
+        <button class="persp-arrow" id="perspNext" aria-label="Weiter">→</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 3. PROBLEM & LÖSUNG ═══ -->
+<section class="slide" id="problem">
+  <div class="slide-inner">
+    <div class="section-label">Das Problem</div>
+    <h2 class="section-title reveal">KI im Unternehmen ist heute Wildwuchs.</h2>
+    <p class="section-sub reveal">
+      Mitarbeiter nutzen KI längst, aber unkoordiniert, unkontrolliert und oft mit privaten Accounts.
+      Das kostet Geld, Wissen und im Zweifel die Compliance.
+    </p>
+    <div class="problem-solution reveal">
+      <div class="ps-block problem">
+        <div class="ps-label">Status quo</div>
+        <ul class="ps-list">
+          <li>Schatten-IT: private KI-Accounts mit Firmendaten</li>
+          <li>Seat-Preise skalieren linear, jeder Kopf kostet extra</li>
+          <li>Niemand weiß, wer wie viel KI-Budget verbraucht</li>
+          <li>Jeder Chat startet bei null, kein Teamgedächtnis</li>
+          <li>Kundendaten laufen durch fremde Clouds: Haftungsrisiko</li>
+          <li>Anbieter-Wechsel unmöglich: Vendor-Lock-in</li>
+        </ul>
+      </div>
+      <div class="ps-block solution">
+        <div class="ps-label">Mit ToolDash-OS</div>
+        <ul class="ps-list">
+          <li>Ein zentraler, firmeneigener KI-Zugang für alle</li>
+          <li>Abos und API-Keys bündeln und im Team fair verteilen</li>
+          <li>Harte Budget-Limits: Unternehmen, Team, Person</li>
+          <li>Team-Wissensbasis, die jede KI-Session als Kontext nutzt</li>
+          <li>Hybrid: Steuerung in der Cloud, sensible Ausführung bei euch</li>
+          <li>Anbieter-unabhängig: Claude, GPT & Co. austauschbar</li>
+        </ul>
+      </div>
+    </div>
+    <div class="why-now reveal">
+      <div class="why-card">
+        <div class="why-head">⏱️ Warum jetzt?</div>
+        <div class="why-body">KI-Nutzung in Unternehmen explodiert. Die Governance-Werkzeuge dafür fehlen fast überall.</div>
+      </div>
+      <div class="why-card">
+        <div class="why-head">⚖️ Regulatorischer Druck</div>
+        <div class="why-body">DSGVO, EU AI Act und NIS2 zwingen Unternehmen, KI-Nutzung nachvollziehbar und datensouverän zu machen.</div>
+      </div>
+      <div class="why-card">
+        <div class="why-head">💸 Kostendruck</div>
+        <div class="why-body">KI-SaaS kostet pro Kopf und Monat. Pooling und zentrale Steuerung senken die Kosten strukturell.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 4. WAS HEUTE SCHON LÄUFT ═══ -->
+<section class="slide" id="kernfeatures">
+  <div class="slide-inner">
+    <div class="section-label">Die Plattform · heute lauffähig</div>
+    <h2 class="section-title reveal">Der Kern steht.<br>Vier Bausteine, ein System.</h2>
+    <p class="section-sub reveal">
+      Kein Konzeptpapier: Die Plattform läuft produktiv im Eigenbetrieb.
+      Multi-User, isolierte Umgebungen, zentrales KI-Gateway, Live-Monitoring.
+    </p>
+    <div class="pillars reveal">
+
+      <div class="pillar">
+        <div class="pillar-icon">🎛️</div>
+        <div class="pillar-title">KI-Governance & Budgets</div>
+        <div class="pillar-sub">Kostenkontrolle in Echtzeit</div>
+        <div class="pillar-desc">
+          Jede KI-Anfrage läuft durch das firmeneigene Gateway. Budgets werden auf drei Ebenen
+          gesetzt: Unternehmen, Team, Person. Sie werden live durchgesetzt, der Verbrauch ist
+          jederzeit einsehbar, Überraschungsrechnungen sind ausgeschlossen.
+        </div>
+        <div class="pillar-tags">
+          <span class="ptag">Budget-Hierarchie</span>
+          <span class="ptag">Verbrauchs-Tracking</span>
+          <span class="ptag">Live-Limits</span>
+        </div>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-icon">🔑</div>
+        <div class="pillar-title">Abo- & Zugangs-Verwaltung</div>
+        <div class="pillar-sub">Ein Pool statt N Einzelverträge</div>
+        <div class="pillar-desc">
+          Bestehende KI-Abos (Claude, GPT u. a.) und eigene API-Keys werden zentral gebündelt
+          und als Seats im Team verteilt. Bring-your-own-key inklusive: ihr entscheidet,
+          welcher Anbieter wofür genutzt wird.
+        </div>
+        <div class="pillar-tags">
+          <span class="ptag">Abo-Pooling</span>
+          <span class="ptag">BYOK</span>
+          <span class="ptag">Multi-Provider</span>
+        </div>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-icon">🤖</div>
+        <div class="pillar-title">KI-Arbeitsplätze & Agenten</div>
+        <div class="pillar-sub">Isoliert, sofort startklar</div>
+        <div class="pillar-desc">
+          Jede Person erhält eine eigene, vollständig isolierte KI-Arbeitsumgebung im Browser.
+          KI-Agenten erledigen Aufgaben autonom im Hintergrund, mit Live-Status,
+          Zeitplänen und voller Nachvollziehbarkeit.
+        </div>
+        <div class="pillar-tags">
+          <span class="ptag">Agent-Sessions</span>
+          <span class="ptag">Live-Output</span>
+          <span class="ptag">Team-Isolation</span>
+        </div>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-icon">🧠</div>
+        <div class="pillar-title">Team-Gedächtnis & Ideen</div>
+        <div class="pillar-sub">Wissen, das bleibt</div>
+        <div class="pillar-desc">
+          Wissensbasis, Brainstorming und Dokumentation an einem Ort, versioniert und
+          nachvollziehbar. Die KI nutzt dieses Wissen automatisch als Kontext.
+          Neue Mitarbeiter starten per Einladungslink und sind vom ersten Tag an produktiv.
+        </div>
+        <div class="pillar-tags">
+          <span class="ptag">Wissensbasis</span>
+          <span class="ptag">Brainstorming → Umsetzung</span>
+          <span class="ptag">Onboarding per Link</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 5. WETTBEWERB & USPs ═══ -->
+<section class="slide" id="usp">
+  <div class="slide-inner">
+    <div class="section-label">Der Unterschied</div>
+    <h2 class="section-title reveal">Zwischen KI-SaaS und Automatisierung<br>klafft eine Lücke.</h2>
+    <p class="section-sub reveal">
+      KI-Anbieter liefern Chat ohne Kontrolle. Automatisierungs-Tools liefern Kontrolle ohne KI-Governance.
+      ToolDash-OS besetzt die Lücke dazwischen: <strong style="color:var(--fg)">hybrid, mit Cloud-Komfort und Datenhoheit</strong>.
+    </p>
+    <div class="compare-grid reveal">
+      <div class="compare-item">
+        <div class="label">KI-SaaS</div>
+        <div class="head">ChatGPT Team,<br>Microsoft Copilot</div>
+        <ul>
+          <li><span class="mark cross">✗</span> Preis pro Kopf, Kosten skalieren linear mit</li>
+          <li><span class="mark cross">✗</span> Daten liegen beim Anbieter, US-Cloud</li>
+          <li><span class="mark cross">✗</span> Ein Anbieter, ein Modell: Lock-in</li>
+          <li><span class="mark cross">✗</span> Kein teamübergreifendes Budget-Management</li>
+        </ul>
+      </div>
+      <div class="compare-item">
+        <div class="label">Automatisierung</div>
+        <div class="head">n8n, Zapier,<br>Make</div>
+        <ul>
+          <li><span class="mark cross">✗</span> Workflow-Verkettung, keine KI-Plattform</li>
+          <li><span class="mark cross">✗</span> Keine KI-Kosten- oder Abo-Verwaltung</li>
+          <li><span class="mark cross">✗</span> Kein Teamgedächtnis, kein KI-Kontext</li>
+          <li><span class="mark cross">✗</span> Technik-Fokus: Fachabteilungen bleiben außen vor</li>
+        </ul>
+      </div>
+      <div class="compare-item highlight">
+        <div class="label">KI-Betriebssystem</div>
+        <div class="head">ToolDash-OS</div>
+        <ul>
+          <li><span class="mark check">✓</span> Abos & Keys poolen: Kosten wachsen nicht pro Kopf</li>
+          <li><span class="mark check">✓</span> Hybrid: Cloud-Dashboard, Ausführung auch bei euch</li>
+          <li><span class="mark check">✓</span> Anbieter-unabhängig: Modelle frei wählbar</li>
+          <li><span class="mark check">✓</span> Governance, Teamwissen & Agenten in einem System</li>
+        </ul>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" class="card-grid-2 reveal">
+      <div class="usp-detail">
+        <div class="usp-head">🛡️ Datenhoheit <span class="vs">vs. Cloud-Zwang</span></div>
+        <div class="usp-neg">✗ SaaS: alles läuft beim Anbieter, Firmendaten inklusive.</div>
+        <div class="usp-pos">✓ ToolDash-OS: Dashboard und Steuerung bequem in der Cloud, die KI-Ausführung wahlweise dort oder auf eurer eigenen Hardware.</div>
+      </div>
+      <div class="usp-detail">
+        <div class="usp-head">💰 Strukturelle Kostenvorteile <span class="vs">vs. Seat-Pricing</span></div>
+        <div class="usp-neg">✗ SaaS: 25 bis 30 € pro Person und Monat, unabhängig von der Nutzung.</div>
+        <div class="usp-pos">✓ ToolDash-OS: gemeinsame Abo-Pools, harte Limits, nutzungsbasierte Verteilung.</div>
+      </div>
+      <div class="usp-detail">
+        <div class="usp-head">🧠 Teamgedächtnis <span class="vs">vs. Null-Start</span></div>
+        <div class="usp-neg">✗ SaaS: jeder Chat beginnt ohne Firmenkontext.</div>
+        <div class="usp-pos">✓ ToolDash-OS: die KI kennt Projekte, Entscheidungen und Wissen des Teams.</div>
+      </div>
+      <div class="usp-detail">
+        <div class="usp-head">🔓 Kein Vendor-Lock-in <span class="vs">vs. Ein-Anbieter-Welt</span></div>
+        <div class="usp-neg">✗ SaaS: Wechsel des KI-Anbieters = Neuanfang.</div>
+        <div class="usp-pos">✓ ToolDash-OS: Anbieter und Modelle sind austauschbar, die Plattform bleibt.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 6. SKALIERUNG ═══ -->
+<section class="slide" id="skalierung">
+  <div class="slide-inner">
+    <div class="section-label">Skalierung</div>
+    <h2 class="section-title reveal">Wächst von 1 auf 200+.</h2>
+    <p class="section-sub reveal">
+      Jedes Team arbeitet in einer vollständig isolierten Umgebung mit eigenem Budget:
+      kein ungewollter Datenzugriff, keine gegenseitige Beeinflussung.
+    </p>
+    <div class="card-grid card-grid-3 reveal">
+
+      <div class="tier-card">
+        <div>
+          <div class="tier-label" style="color:var(--primary)">Starter</div>
+          <div class="tier-size">1–10<br><span style="font-size:16px;font-weight:500;color:var(--fg-soft)">Personen</span></div>
+        </div>
+        <ul class="tier-list">
+          <li><span style="color:var(--primary)">✓</span> Ein KI-Zugang fürs ganze Team</li>
+          <li><span style="color:var(--primary)">✓</span> Onboarding per Einladungslink</li>
+          <li><span style="color:var(--primary)">✓</span> Budgets und Abos zentral verwalten</li>
+          <li><span style="color:var(--primary)">✓</span> Keine IT-Abteilung nötig</li>
+        </ul>
+      </div>
+
+      <div class="tier-card" style="border-color:rgba(90,133,255,.3);background:rgba(90,133,255,.03)">
+        <div>
+          <div class="tier-label" style="color:var(--accent)">Team</div>
+          <div class="tier-size">10–100<br><span style="font-size:16px;font-weight:500;color:var(--fg-soft)">Personen</span></div>
+        </div>
+        <ul class="tier-list">
+          <li><span style="color:var(--accent)">✓</span> Teams vollständig isoliert, eigene Budgets</li>
+          <li><span style="color:var(--accent)">✓</span> Team-Leads verwalten dezentral</li>
+          <li><span style="color:var(--accent)">✓</span> Abo-Pools mit Seat-Limits</li>
+          <li><span style="color:var(--accent)">✓</span> Nachvollziehbarkeit aller KI-Aktivitäten</li>
+        </ul>
+      </div>
+
+      <div class="tier-card" style="border-color:rgba(251,191,36,.2);background:rgba(251,191,36,.02)">
+        <div>
+          <div class="tier-label" style="color:var(--warn)">Enterprise</div>
+          <div class="tier-size">200+<br><span style="font-size:16px;font-weight:500;color:var(--fg-soft)">Personen</span></div>
+        </div>
+        <ul class="tier-list">
+          <li><span style="color:var(--warn)">✓</span> Vollständige Mandantentrennung</li>
+          <li><span style="color:var(--warn)">✓</span> SSO/LDAP-Anbindung <span style="color:var(--muted);font-size:11px">(Roadmap)</span></li>
+          <li><span style="color:var(--warn)">✓</span> Eigene Infrastruktur / On-Premise</li>
+          <li><span style="color:var(--warn)">✓</span> Dedizierter Support & SLA</li>
+        </ul>
+      </div>
+
+    </div>
+    <!-- Tech-Validierung für Tech-Entscheider -->
+    <div class="tech-row reveal">
+      <div style="width:100%;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:4px">Für Tech-Entscheider · bewährter Stack, kein Experiment</div>
+      <div class="tech-badge">🐍 Python / Django</div>
+      <div class="tech-badge">⚛️ React + TypeScript</div>
+      <div class="tech-badge">🐋 Docker</div>
+      <div class="tech-badge">🐘 PostgreSQL</div>
+      <div class="tech-badge">⚡ Redis</div>
+      <div class="tech-badge">🌐 Nginx</div>
+      <div class="tech-badge">🤖 LLM-Gateway</div>
+      <div class="tech-badge">📚 MCP-Protokoll</div>
+      <div class="tech-badge">📈 Grafana-Monitoring</div>
+      <div class="tech-badge">🔑 OAuth 2.0</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 7. AUSBLICK: TOOLS & WORKFLOWS ═══ -->
+<section class="slide" id="ausblick">
+  <div class="slide-inner">
+    <div class="section-label">Ausblick · ab Beta und Final</div>
+    <h2 class="section-title reveal">Auf dem Fundament wächst<br>ein Werkzeugkasten.</h2>
+    <p class="section-sub reveal">
+      Die Plattform ist das Produkt, der Tool-Katalog ist ihr Wachstumspfad.
+      Fertige, KI-gestützte Fach-Werkzeuge kommen schrittweise ab der Beta dazu;
+      erste Tools existieren bereits als Prototypen.
+    </p>
+    <div class="card-grid card-grid-4 reveal" style="gap:10px">
+      <div class="tool-card"><div class="tool-card-head"><div class="tool-card-icon">📋</div><div class="tool-card-title">Projektmanagement</div></div><div class="tool-card-desc">KI erstellt Pläne und schätzt Aufwände.</div></div>
+      <div class="tool-card"><div class="tool-card-head"><div class="tool-card-icon">📊</div><div class="tool-card-title">Analytics</div></div><div class="tool-card-desc">Daten einlesen, KI baut Dashboards.</div></div>
+      <div class="tool-card"><div class="tool-card-head"><div class="tool-card-icon">🌐</div><div class="tool-card-title">Webauftritt</div></div><div class="tool-card-desc">KI-gestützter Page-Builder, Corporate Design.</div></div>
+      <div class="tool-card"><div class="tool-card-head"><div class="tool-card-icon">📈</div><div class="tool-card-title">Reporting</div></div><div class="tool-card-desc">Automatisierte, designangepasste Reports.</div></div>
+      <div class="tool-card"><div class="tool-card-head"><div class="tool-card-icon">🔌</div><div class="tool-card-title">Integrationen</div></div><div class="tool-card-desc">CRM, ERP, E-Mail: zentral angebunden.</div></div>
+      <div class="tool-card"><div class="tool-card-head"><div class="tool-card-icon">🔀</div><div class="tool-card-title">Workflows</div></div><div class="tool-card-desc">Tools visuell verketten und automatisieren.</div></div>
+      <div class="tool-card"><div class="tool-card-head"><div class="tool-card-icon">💡</div><div class="tool-card-title">Brainstorm</div></div><div class="tool-card-desc">Team-Ideen sammeln, KI reichert an und bewertet.</div></div>
+      <div class="tool-card" style="border-color:rgba(44,197,135,.2);background:rgba(44,197,135,.03)"><div class="tool-card-head"><div class="tool-card-icon">⚡</div><div class="tool-card-title">Eigene Tools</div></div><div class="tool-card-desc">Die KI baut neue Werkzeuge aus Team-Ideen.</div></div>
+    </div>
+    <div class="quote-block reveal">
+      „Der eingebaute Kreislauf ist der eigentliche Hebel: Ideen aus dem Brainstorming werden
+      mit KI-Unterstützung zu eigenen Tools. Jedes Team baut sich so seinen
+      Werkzeugkasten selbst, genau zugeschnitten auf die eigenen Abläufe."
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 8. ROADMAP ═══ -->
+<section class="slide" id="roadmap">
+  <div class="slide-inner">
+    <div class="section-label">Roadmap</div>
+    <h2 class="section-title reveal">Wo wir stehen.<br>Wo wir hinwollen.</h2>
+    <div class="roadmap reveal">
+
+      <div class="roadmap-item">
+        <div class="roadmap-left">
+          <div class="roadmap-phase">Fundament</div>
+          <div class="roadmap-date">H1 2026</div>
+          <div class="roadmap-status status-done">✓ Abgeschlossen</div>
+        </div>
+        <div class="roadmap-right">
+          <div class="roadmap-title">Plattform-Kern läuft produktiv</div>
+          <div class="roadmap-desc">
+            Multi-User-Architektur mit isolierten Umgebungen, zentrales KI-Gateway mit
+            Budget-Hierarchie, Abo- und Key-Verwaltung, KI-Agenten mit Live-Status,
+            Team-Wissensbasis, Monitoring. Im Eigenbetrieb im täglichen Einsatz.
+          </div>
+          <div class="roadmap-tags">
+            <span class="pill done">KI-Gateway</span>
+            <span class="pill done">Budget-Kontrolle</span>
+            <span class="pill done">Abo-Pooling</span>
+            <span class="pill done">Agent-Sessions</span>
+            <span class="pill done">Team-Isolation</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-left">
+          <div class="roadmap-phase">Prototyp</div>
+          <div class="roadmap-date">Q3 2026</div>
+          <div class="roadmap-status status-active">● In Arbeit</div>
+        </div>
+        <div class="roadmap-right">
+          <div class="roadmap-title">Verwendbarer Prototyp für erste Pilotkunden</div>
+          <div class="roadmap-desc">
+            Oberfläche vervollständigen, Chat- und Agenten-Strecke durchgängig härten,
+            automatisiertes Backup, Zuverlässigkeits- und Sicherheitsnachweise.
+            Das System wird von „läuft bei uns" zu „läuft beim Kunden".
+          </div>
+          <div class="roadmap-tags">
+            <span class="pill active">UI-Vervollständigung</span>
+            <span class="pill active">Stabilisierung</span>
+            <span class="pill active">Backup & Betriebssicherheit</span>
+            <span class="pill active">Pilotkunden-Onboarding</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-left">
+          <div class="roadmap-phase">Beta</div>
+          <div class="roadmap-date">Q4 2026</div>
+          <div class="roadmap-status status-planned">○ Geplant</div>
+        </div>
+        <div class="roadmap-right">
+          <div class="roadmap-title">Geschlossene Beta mit Pilotteams</div>
+          <div class="roadmap-desc">
+            Hybrid-Betrieb: KI-Ausführung wahlweise in der Cloud oder auf Hardware des Kunden.
+            Strukturelle Kostenoptimierung (Caching, intelligentes Modell-Routing),
+            ausgebaute Wissensbasis und Brainstorming, erste Fach-Tools im Katalog.
+          </div>
+          <div class="roadmap-tags">
+            <span class="pill">Hybrid Cloud + On-Premise</span>
+            <span class="pill">Kostenoptimierung</span>
+            <span class="pill">Erste Fach-Tools</span>
+            <span class="pill">Beta-Programm</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="roadmap-item">
+        <div class="roadmap-left">
+          <div class="roadmap-phase">Final</div>
+          <div class="roadmap-date">Q2/Q3 2027</div>
+          <div class="roadmap-status status-planned">○ Geplant</div>
+        </div>
+        <div class="roadmap-right">
+          <div class="roadmap-title">Marktreife & Enterprise</div>
+          <div class="roadmap-desc">
+            Visueller Workflow-Editor (Tools per Drag & Drop verketten), ausgebauter
+            Tool-Katalog inkl. Webauftritt und Integrationen, SSO/LDAP, Hochverfügbarkeit,
+            Enterprise-Option mit eigener Infrastruktur, Vorbereitung Tool-Marketplace.
+          </div>
+          <div class="roadmap-tags">
+            <span class="pill">Workflow-Editor</span>
+            <span class="pill">Tool-Katalog</span>
+            <span class="pill">SSO / LDAP</span>
+            <span class="pill">Enterprise-Option</span>
+            <span class="pill">Marketplace</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 9. CTA ═══ -->
+<section class="slide" id="kontakt">
+  <div class="slide-inner" style="align-items:center;text-align:center;gap:32px">
+    <img src="resources/gradient-animated-dark.svg" alt="ToolDash" style="width:72px;height:72px">
+    <h2 class="section-title reveal" style="font-size:clamp(28px,4.5vw,50px);max-width:720px">
+      Neugierig geworden?<br>
+      <span class="grad">Sichere dir frühen Zugang.</span>
+    </h2>
+    <p class="reveal" style="font-size:17px;color:var(--fg-soft);max-width:540px;line-height:1.7">
+      Prototyp und Beta stehen vor der Tür, und dafür suchen wir Teams,
+      die ToolDash-OS früh testen und mitprägen wollen.
+      Melde dich, und wir halten dich auf dem Laufenden.
+    </p>
+    <div class="reveal" style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:center;background:var(--surface);padding:16px 24px;border-radius:var(--radius);border:1px solid var(--border)">
+      <span class="contact-email" id="copyEmail" title="Klicken zum Kopieren">ninu.git@gmail.com</span>
+      <a href="mailto:ninu.git@gmail.com?subject=ToolDash-OS%20Beta-Zugang" class="btn-primary">✉️ Früh dabei sein</a>
+    </div>
+    <div class="divider" style="max-width:400px"></div>
+    <div class="reveal" style="display:flex;gap:0;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface)">
+      <div style="padding:16px 28px;text-align:center;border-right:1px solid var(--border)">
+        <div style="font-size:15px;font-weight:700;color:var(--primary)">Kostenkontrolle</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">Budgets auf 3 Ebenen</div>
+      </div>
+      <div style="padding:16px 28px;text-align:center;border-right:1px solid var(--border)">
+        <div style="font-size:15px;font-weight:700;color:var(--primary)">Datenhoheit</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">hybrid, DSGVO</div>
+      </div>
+      <div style="padding:16px 28px;text-align:center">
+        <div style="font-size:15px;font-weight:700;color:var(--primary)">Unabhängigkeit</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">kein Vendor-Lock-in</div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:var(--muted);font-family:var(--mono)">ToolDash-OS · Stand Juli 2026</p>
+  </div>
+</section>
+
+<script>
+(function() {
+  // Hintergrund-Punkte
+  const c = document.getElementById('dots');
+  for (let i = 0; i < 20; i++) {
+    const d = document.createElement('div');
+    d.className = 'bg-dot';
+    d.style.left = Math.random() * 100 + '%';
+    d.style.top = Math.random() * 100 + '%';
+    d.style.animationDelay = (Math.random() * 6) + 's';
+    d.style.animationDuration = (4 + Math.random() * 5) + 's';
+    c.appendChild(d);
+  }
+
+  // Scroll-Reveal
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduceMotion && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+  } else {
+    document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+  }
+
+  // Perspektiven-Slider
+  const slider = document.getElementById('perspSlider');
+  if (slider) {
+    const slides = slider.querySelectorAll('.persp-slide');
+    const dotsWrap = document.getElementById('perspDots');
+    let current = 0, timer = null;
+
+    slides.forEach((_, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'persp-dot' + (i === 0 ? ' active' : '');
+      dot.setAttribute('aria-label', 'Folie ' + (i + 1));
+      dot.addEventListener('click', () => go(i));
+      dotsWrap.appendChild(dot);
+    });
+    const dots = dotsWrap.querySelectorAll('.persp-dot');
+
+    function go(i) {
+      current = (i + slides.length) % slides.length;
+      slides.forEach((s, n) => s.classList.toggle('active', n === current));
+      dots.forEach((d, n) => d.classList.toggle('active', n === current));
+    }
+    // Autoplay nur auf Desktop (Geräte mit Maus); pausiert, solange die
+    // Maus über dem Slider liegt, damit beim Lesen nichts wegwechselt.
+    const isDesktop = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    function startAuto() {
+      if (reduceMotion || !isDesktop) return;
+      clearInterval(timer);
+      timer = setInterval(() => go(current + 1), 7000);
+    }
+    function stopAuto() { clearInterval(timer); }
+    document.getElementById('perspPrev').addEventListener('click', () => go(current - 1));
+    document.getElementById('perspNext').addEventListener('click', () => go(current + 1));
+    slider.addEventListener('mouseenter', stopAuto);
+    slider.addEventListener('mouseleave', startAuto);
+    startAuto();
+  }
+
+  // E-Mail per Klick kopieren
+  const email = document.getElementById('copyEmail');
+  if (email) {
+    const address = email.textContent.trim();
+    email.addEventListener('click', () => {
+      const done = () => {
+        email.textContent = '✓ kopiert!';
+        email.classList.add('copied');
+        setTimeout(() => { email.textContent = address; email.classList.remove('copied'); }, 1800);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(address).then(done).catch(() => fallback());
+      } else { fallback(); }
+      function fallback() {
+        const ta = document.createElement('textarea');
+        ta.value = address; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        done();
+      }
+    });
+  }
+})();
+</script>
+</body>
+</html>
